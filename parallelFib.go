@@ -17,6 +17,7 @@ func main() {
     }
 }
 
+//Believe that gen is like customers
 func gen(nums ...int) <-chan int {
     out := make(chan int)
     go func() {
@@ -54,6 +55,7 @@ func merge(cs ...<-chan int) <-chan int {
     return out
 }
 
+//probably like the server
 func makeServer(in <-chan int) <-chan int {
     out := make(chan int)
     go func() {
