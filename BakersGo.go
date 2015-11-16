@@ -12,7 +12,7 @@ type customer struct {
 	fib int
 }
 
-//Compile and run from terminal using `go build long.go && ./long`
+//Compile and run from terminal using `go build BakersGo.go && ./BakersGo`
 //Good variables (in order): 10,3,20,40+10
 
 //Alternatively paste and run at play.golang.org
