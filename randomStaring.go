@@ -12,6 +12,9 @@ func main() {
     //in := makeCustomers(29,35,36,25)
 
     numCustomer := 4
+    // var terminator sync.WaitGroup
+    // terminator.Add(numCustomer)
+
     in := makeRandomCustomers(numCustomer)
 
     // Distribute the sq work across two goroutines that both read from in.
@@ -20,26 +23,25 @@ func main() {
   //  c3 := makeServer(in)
 
 
-
-    for n := range merge(c1 ,c2) {
-        fmt.Println(n)
-    }
-
+  allResults := merge(c1 ,c2)
+  for i := 0; i < numCustomer; i++ {
+    fmt.Println(<-allResults)
+    // terminator.Done()
+  }
+    // terminator.Wait()
 }
 
 func makeRandomCustomers(count int) <-chan int {
     out := make(chan int)
-    var wg sync.WaitGroup
-    wg.Add(count);//wait for all count go procedures to finish
+  //  var wg sync.WaitGroup
+//    wg.Add(count);//wait for all count go procedures to finish
 
     for i := 0; i < count; i++ {
       go func(index int) {
         fmt.Printf("Starting customer %d\n",index)
         defer fmt.Printf("Customer %d is done!\n",index)
-        defer wg.Done() //decrement wg when this finishes
-        //fmt.Printf("start %d\n",index)
-        delaySeed := rand.Intn(20)
-        delay := time.Duration(delaySeed)*time.Second
+    //    defer wg.Done() //decrement wg when this finishes
+        delay := time.Duration(rand.Intn(20))*time.Second
         time.Sleep(delay)
         out <- rand.Intn(20)+10 //Passing a random number to get fib-ed
       }(i)//pass in a copy of index so we can keep track of which customer
