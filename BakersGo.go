@@ -12,69 +12,62 @@ type customer struct {
 	fib int
 }
 
+//Compile and run from terminal using `go build long.go && ./long`
 func main() {
-    numCustomers := 10;
+  numCustomers := 10;
+  // Generate required amount of customers by spawing numCustomers goroutines.
+  // When customers wake up, they will add themselves to the waitingCustomers channel.
+  waitingCustomers := makeRandomCustomers(numCustomers)
 
+  // Distribute the fib work across goroutines that read from waitingCustomers.
+  // Each server writes results, as they are found, to it's own channel (of type customer).
+  resultChan1 := serialServer(waitingCustomers)
+  resultChan2 := serialServer(waitingCustomers)
+  resultChan3 := serialServer(waitingCustomers)
+  //A resultChan that merges what is forwarded from each individual resultChan
+  allResults := merge(resultChan1,
+                      resultChan2,
+                      resultChan3)
 
-
-    in := makeRandomCustomers(numCustomers)
-
-    // Distribute the sq work across two goroutines that both read from in.
-    // c1 := serialServer(in)
-    // c2 := serialServer(in)
-  //  c3 := makeServer(in)
-
-// fmt.Println(c1)
-// fmt.Println(c2)
-
-  allResults := merge(serialServer(in),serialServer(in))
+  //Print out all numCustomers results as they come in from any respective channel.
   for i := 0; i < numCustomers; i++ {
-    doneCust := <-allResults
-
-    fmt.Printf("========>The result is %d for customer %d\n", doneCust.fib, doneCust.id)
+    result := <-allResults
+    fmt.Printf("%d=======>The result is %d!!!\n", result.id, result.fib)
   }
-    // terminator.Done()
-    // terminator.Wait()
 }
 
 func makeRandomCustomers(count int) <-chan customer {
-    out := make(chan customer)
-  //  var wg sync.WaitGroup
-//    wg.Add(count);//wait for all count go procedures to finish
+    awakeCustomers := make(chan customer)
 
+    //Kick off goroutines and return the new (likely empty) channel imediately.
+    //Coustomers will add themselves to awakeCustomers channel as they awaken.
     for i := 0; i < count; i++ {
       go func(index int) {
-        fmt.Printf("Starting customer %d\n",index)
-    //    defer fmt.Printf("Customer %d is done!\n",index)
-    //    defer wg.Done() //decrement wg when this finishes
+        fmt.Printf("Initialising customer %d\n",index)
         delay := time.Duration(rand.Intn(20))*time.Second
         fibNum := rand.Intn(40)+10;
         time.Sleep(delay)
-        fmt.Printf("Done sleeping. Calculate fib(%d) for %d\n",fibNum, index)
-        out <- customer{index, fibNum} //Passing a random number to get fib-ed
-      }(i)//pass in a copy of index so we can keep track of which customer
+        fmt.Printf("%d~>Done sleeping. Please calculate fib(%d) ASAP!\n",index, fibNum)
+        awakeCustomers <- customer{index, fibNum} //Passing a random number to get fib-ed
+      }(i)//pass in a copy of index so we can keep track of customer id
     }
-
-  //  wg.Wait()
-    //close(out)
-    return out
+    return awakeCustomers
 }
 
-
-func serialServer(in <-chan customer) <-chan customer {
+func serialServer(awakeCustomers <-chan customer) <-chan customer {
     out := make(chan customer)
     go func() {
-        for n := range in {
-            fmt.Printf("-->Calculating fib of %d for customer %d\n", n.fib, n.id)
+        for n := range awakeCustomers {
+            fmt.Printf("%d--->Calculating fib of %d\n", n.id, n.fib)
             out <- customer{n.id, fib(n.fib)}
-            fmt.Printf("?=====>Done Calculating fib of %d for customer %d??\n", n.fib, n.id)
+            fmt.Printf("%d=====>Done calculating fib(%d). Printing momentarily...\n", n.id, n.fib)
 	}
         close(out)
     }()
     return out
 }
 
-
+//combines all resultChan on the fly using 'fan-in' from https://blog.golang.org/pipelines
 func merge(cs ...<-chan customer) <-chan customer {
     var wg sync.WaitGroup
     out := make(chan customer)
@@ -85,17 +78,17 @@ func merge(cs ...<-chan customer) <-chan customer {
         for n := range c {
             out <- n
         }
-        wg.Done()
+        wg.Done()//wg--
     }
-    wg.Add(len(cs))
-    for _, c := range cs {
-        go output(c)
+    wg.Add(len(cs))//wg++, but incremnts all at once here
+    for _, v := range cs {//loop gets k,v pairs: key unused, value is v
+        go output(v)
     }
 
     // Start a goroutine to close out once all the output goroutines are
-    // done.  This must start after the wg.Add call.
+    // done.  This must start after the wg.Add call. (Otherwise wait would pass)
     go func() {
-        wg.Wait()
+        wg.Wait()//is wg==0 yet?
         close(out)
     }()
     return out
