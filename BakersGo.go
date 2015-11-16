@@ -13,6 +13,19 @@ type customer struct {
 }
 
 //Compile and run from terminal using `go build long.go && ./long`
+//Good variables (in order): 10,3,20,40+10
+
+//Alternatively paste and run at play.golang.org
+//Good variables (in order): 10,2,2,10+29
+
+//To modify variables:
+//==> numCustomers: edit directly
+//==> number of Servers:
+// -------> In main, duplicate line `resultChanX := serialServer(waitingCustomers)``
+// -------> and add it to merge(... ... resultChanX)
+//==> customer sleep time: edit the `delay` in makeRandomCustomers(count int)
+//==> customer fib range: edit the `fibNum` in makeRandomCustomers(count int)
+
 func main() {
   numCustomers := 10;
   // Generate required amount of customers by spawing numCustomers goroutines.
@@ -23,11 +36,10 @@ func main() {
   // Each server writes results, as they are found, to it's own channel (of type customer).
   resultChan1 := serialServer(waitingCustomers)
   resultChan2 := serialServer(waitingCustomers)
-  resultChan3 := serialServer(waitingCustomers)
+
   //A resultChan that merges what is forwarded from each individual resultChan
   allResults := merge(resultChan1,
-                      resultChan2,
-                      resultChan3)
+                      resultChan2)
 
   //Print out all numCustomers results as they come in from any respective channel.
   for i := 0; i < numCustomers; i++ {
@@ -44,8 +56,8 @@ func makeRandomCustomers(count int) <-chan customer {
     for i := 0; i < count; i++ {
       go func(index int) {
         fmt.Printf("Initialising customer %d\n",index)
-        delay := time.Duration(rand.Intn(20))*time.Second
-        fibNum := rand.Intn(40)+10;
+        delay := time.Duration(rand.Intn(2))*time.Second
+        fibNum := rand.Intn(10)+29;
         time.Sleep(delay)
         fmt.Printf("%d~>Done sleeping. Please calculate fib(%d) ASAP!\n",index, fibNum)
         awakeCustomers <- customer{index, fibNum} //Passing a random number to get fib-ed
